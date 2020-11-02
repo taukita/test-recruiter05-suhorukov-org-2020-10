@@ -1,27 +1,21 @@
-# Used MySQL dialect
-
-# Tables
-
 CREATE TABLE Employee (
-  Id int NOT NULL AUTO_INCREMENT,
-  Name varchar(255) NOT NULL,
-  PRIMARY KEY (Id)
+  Id int NOT NULL IDENTITY(1,1) PRIMARY KEY,
+  Name varchar(255) NOT NULL
 );
 
 CREATE TABLE Turnstile (
-  Id int NOT NULL AUTO_INCREMENT,
+  Id int NOT NULL IDENTITY(1,1) PRIMARY KEY,
   EmployeeId int NOT NULL,
   EnterTime DATETIME NOT NULL,
   LeaveTime DATETIME,
-  PRIMARY KEY (Id),
   FOREIGN KEY (EmployeeId) REFERENCES Employee(Id)
 );
 
 # Query with params
 
 SELECT 
-	e.Name,       
-	SEC_TO_TIME(SUM(TIME_TO_SEC(t.LeaveTime) - TIME_TO_SEC(t.EnterTime))) AS TotalTime
-FROM Employee e, Turnstile t
-WHERE e.Id = t.EmployeeId AND t.LeaveTime IS NOT NULL AND t.EnterTime > @paramFrom AND t.LeaveTime < @paramTo
-GROUP BY t.EmployeeId
+	e.Name,
+    ISNULL((SELECT SUM(DATEDIFF (second, t.EnterTime, ISNULL(t.LeaveTime, GETDATE())) / (60.0 * 60.0))
+	FROM Turnstile t
+	WHERE e.Id = t.EmployeeId AND t.EnterTime > @paramFrom AND (t.LeaveTime < @paramTo OR t.LeaveTime IS NULL)),0) AS TotalHours
+FROM Employee e
